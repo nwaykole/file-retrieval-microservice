@@ -1,0 +1,14 @@
+# Stage 3 values used by CI (helm lint / template / kubeconform). Not real resources.
+appMode: file-service
+image: europe-west2-docker.pkg.dev/my-gcp-project/fs-dev-images/file-service@sha256:0000000000000000000000000000000000000000000000000000000000000000
+environment: dev
+domain: files.dev.example.com
+platform:
+  fileServiceGsa: fs-dev-files@my-gcp-project.iam.gserviceaccount.com
+  lbIpName: fs-dev-lb-ip
+  certificateName: fs-dev-cert
+  sslPolicyName: fs-dev-ssl
+  bucketName: fs-dev-files
+  sqlConnectionName: my-gcp-project:europe-west2:fs-dev-pg
+  dbIamUser: fs-dev-files@my-gcp-project.iam
+  psaCidr: 10.30.0.0/20

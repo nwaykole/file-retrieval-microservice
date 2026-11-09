@@ -1,0 +1,10 @@
+apiVersion: v2
+name: file-service
+description: >-
+  Customer file retrieval service on GKE Autopilot: Deployment, autoscaling, disruption
+  budget, network policies and the Gateway that provisions the global external
+  Application Load Balancer. Cloud resources come from the Terraform platform stack.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords: [gke, gateway-api, cloud-sql, gcs]

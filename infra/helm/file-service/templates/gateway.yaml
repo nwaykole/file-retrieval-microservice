@@ -1,0 +1,101 @@
+# GKE Gateway API -> Global external Application Load Balancer (Envoy-based GFE).
+# Attaches the static IP, managed cert and TLS policy from the platform stack.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "file-service.labels" . | nindent 4 }}
+spec:
+  gatewayClassName: gke-l7-global-external-managed
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        options:
+          networking.gke.io/pre-shared-certs: {{ .Values.platform.certificateName | quote }}
+      allowedRoutes:
+        namespaces:
+          from: Same
+  addresses:
+    - type: NamedAddress
+      value: {{ .Values.platform.lbIpName | quote }}
+---
+apiVersion: networking.gke.io/v1
+kind: GCPGatewayPolicy
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "file-service.labels" . | nindent 4 }}
+spec:
+  default:
+    sslPolicy: {{ .Values.platform.sslPolicyName | quote }}
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: {{ .Values.gateway.name }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "file-service.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "file-service.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ .Values.gateway.name }}
+  hostnames:
+    - {{ .Values.domain | quote }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: {{ include "file-service.name" . }}
+          port: 80
+---
+# Per-backend LB settings: timeout, access-log sampling, connection draining.
+apiVersion: networking.gke.io/v1
+kind: GCPBackendPolicy
+metadata:
+  name: {{ include "file-service.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "file-service.labels" . | nindent 4 }}
+spec:
+  default:
+    timeoutSec: 10
+    connectionDraining:
+      drainingTimeoutSec: 30
+    logging:
+      enabled: true
+      sampleRate: 100000 # 10% (out of 1,000,000)
+  targetRef:
+    {{- include "file-service.targetRef" . | nindent 4 }}
+---
+apiVersion: networking.gke.io/v1
+kind: HealthCheckPolicy
+metadata:
+  name: {{ include "file-service.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "file-service.labels" . | nindent 4 }}
+spec:
+  default:
+    checkIntervalSec: 5
+    timeoutSec: 3
+    healthyThreshold: 1
+    unhealthyThreshold: 2
+    config:
+      type: HTTP
+      httpHealthCheck:
+        port: 8080
+        requestPath: {{ ternary "/readyz" "/" (eq (include "file-service.isApp" .) "true") }}
+  targetRef:
+    {{- include "file-service.targetRef" . | nindent 4 }}

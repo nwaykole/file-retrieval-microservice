@@ -1,0 +1,18 @@
+# Local run: the service with in-memory metadata and local-disk storage.
+#   docker compose up --build   ->  http://localhost:8080/docs
+services:
+  file-service:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      FS_ENV: local
+      FS_STORAGE_BACKEND: local
+      FS_LOCAL_STORAGE_ROOT: /tmp/files
+      FS_METADATA_BACKEND: memory
+      FS_LOCAL_USERNAME: ${FS_LOCAL_USERNAME:-}
+      FS_LOCAL_PASSWORD: ${FS_LOCAL_PASSWORD:-}
+      FS_LOCAL_CUSTOMER_ID: ${FS_LOCAL_CUSTOMER_ID:-}
+    read_only: true
+    tmpfs: ["/tmp"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]

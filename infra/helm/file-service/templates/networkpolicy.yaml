@@ -1,0 +1,72 @@
+# Zero-trust inside the cluster (enforced by Dataplane V2 / Cilium on Autopilot):
+# deny everything, then allow only the flows this service needs.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "file-service.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "file-service.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "file-service.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "file-service.selectorLabels" . | nindent 6 }}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Google Front Ends + health checkers only (container-native LB hits pod IPs).
+    - from:
+        - ipBlock: { cidr: 35.191.0.0/16 }
+        - ipBlock: { cidr: 130.211.0.0/22 }
+      ports:
+        - { port: 8080, protocol: TCP }
+    # Managed Prometheus collectors scraping /metrics.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: gmp-system
+      ports:
+        - { port: 8080, protocol: TCP }
+  egress:
+    # Cluster DNS.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - { port: 53, protocol: UDP }
+        - { port: 53, protocol: TCP }
+    # GKE metadata server (Workload Identity token exchange).
+    - to:
+        - ipBlock: { cidr: 169.254.169.252/32 }
+        - ipBlock: { cidr: 169.254.169.254/32 }
+      ports:
+        - { port: 988, protocol: TCP }
+        - { port: 80, protocol: TCP }
+    # Cloud SQL private IP (proxy speaks 3307 to the instance).
+    - to:
+        - ipBlock: { cidr: {{ .Values.platform.psaCidr }} }
+      ports:
+        - { port: 3307, protocol: TCP }
+    # Google APIs (GCS, IAM, Cloud SQL Admin, Trace) over 443.
+    # Tighten to private.googleapis.com (199.36.153.8/30) once Private Service Connect /
+    # private DNS for googleapis.com is configured; that also enables VPC Service Controls.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16]
+      ports:
+        - { port: 443, protocol: TCP }

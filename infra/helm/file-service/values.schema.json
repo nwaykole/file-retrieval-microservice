@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["appMode", "image", "environment", "domain", "platform", "gateway", "autoscaling"],
+  "properties": {
+    "appMode": {
+      "description": "nginx (stage 2 placeholder) or file-service (stage 3).",
+      "type": "string",
+      "enum": ["nginx", "file-service"]
+    },
+    "image": { "type": "string", "minLength": 1 },
+    "imagePullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] },
+    "environment": { "type": "string", "minLength": 1 },
+    "domain": { "type": "string", "minLength": 1 },
+    "platform": {
+      "type": "object",
+      "required": ["fileServiceGsa", "lbIpName", "certificateName", "sslPolicyName", "psaCidr"],
+      "properties": {
+        "fileServiceGsa": { "type": "string", "minLength": 1 },
+        "lbIpName": { "type": "string", "minLength": 1 },
+        "certificateName": { "type": "string", "minLength": 1 },
+        "sslPolicyName": { "type": "string", "minLength": 1 },
+        "bucketName": { "type": "string" },
+        "sqlConnectionName": { "type": "string" },
+        "dbIamUser": { "type": "string" },
+        "psaCidr": { "type": "string", "pattern": "^[0-9.]+/[0-9]+$" }
+      }
+    },
+    "gateway": {
+      "type": "object",
+      "required": ["name"],
+      "properties": { "name": { "type": "string", "minLength": 1 } }
+    },
+    "resources": {
+      "type": "object",
+      "properties": {
+        "cpuRequest": { "type": "string" },
+        "memoryRequest": { "type": "string" }
+      }
+    },
+    "autoscaling": {
+      "type": "object",
+      "required": ["minReplicas", "maxReplicas"],
+      "properties": {
+        "minReplicas": { "type": "integer", "minimum": 1 },
+        "maxReplicas": {
+          "description": "Need at least one replica per zone.",
+          "type": "integer",
+          "minimum": 3
+        },
+        "targetCPUUtilization": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    }
+  },
+  "if": { "properties": { "appMode": { "const": "file-service" } } },
+  "then": {
+    "properties": {
+      "platform": {
+        "properties": {
+          "bucketName": { "minLength": 1 },
+          "sqlConnectionName": { "minLength": 1 },
+          "dbIamUser": { "minLength": 1 }
+        }
+      }
+    }
+  }
+}

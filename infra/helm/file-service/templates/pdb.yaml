@@ -1,0 +1,12 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "file-service.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "file-service.labels" . | nindent 4 }}
+spec:
+  maxUnavailable: 10% # node upgrades / maintenance can't drain too much at once
+  selector:
+    matchLabels:
+      {{- include "file-service.selectorLabels" . | nindent 6 }}

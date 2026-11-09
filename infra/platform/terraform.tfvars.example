@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars (git-ignored) and fill in.
+project_id              = "my-gcp-project"
+environment             = "dev"                    # dev | staging | prod
+domain                  = "files.dev.example.com"  # a domain you control, or <lb-ip-with-dashes>.sslip.io
+alert_email             = "oncall@example.com"
+master_authorized_cidrs = ["203.0.113.10/32"]      # your VPN / CI runner egress IPs
+deletion_protection     = false                    # dev only; keep true for staging/prod
+
+# SLO targets measured at the load balancer. The brief asks for 0.9999; see README "Capacity and SLOs".
+# availability_goal = 0.999
+# latency_goal      = 0.999

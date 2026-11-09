@@ -1,0 +1,34 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: file-service-egress-platform
+  namespace: files
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: file-service   # match your pod labels
+  policyTypes: [Egress]
+  egress:
+    # DNS: kube-dns pods + node-local/metadata resolvers (Autopilot / Cloud DNS)
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+        - ipBlock: { cidr: 169.254.169.254/32 }
+        - ipBlock: { cidr: 169.254.20.10/32 }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    # GKE metadata server (Workload Identity tokens)
+    - to:
+        - ipBlock: { cidr: 169.254.169.252/32 }
+        - ipBlock: { cidr: 169.254.169.254/32 }
+      ports:
+        - { protocol: TCP, port: 80 }
+        - { protocol: TCP, port: 988 }
+    # Google APIs (sqladmin, GCS) and Cloud SQL instance (3307)
+    - to:
+        - ipBlock: { cidr: 0.0.0.0/0 }
+      ports:
+        - { protocol: TCP, port: 443 }
+        - { protocol: TCP, port: 3307 }

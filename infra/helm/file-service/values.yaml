@@ -1,0 +1,49 @@
+# Workload chart: deployment, autoscaling, disruption budget, network policy and the
+# Gateway (which provisions the global external Application Load Balancer).
+# Stage 2 runs nginx (image default). Stage 3 swaps in the file-service image by
+# changing image / appMode - the platform stays the same.
+#
+# Install into the namespace the platform stack bound Workload Identity to
+# (var.k8s_namespace, default "files"); see ../namespace.yaml.
+
+# nginx (stage 2 placeholder) or file-service (stage 3).
+appMode: nginx
+
+# Pin by digest in prod (image@sha256:...) so Binary Authorization can verify it.
+image: nginxinc/nginx-unprivileged:1.27-alpine
+imagePullPolicy: IfNotPresent
+
+environment: ""   # dev | staging | prod
+domain: ""        # public hostname, e.g. files.dev.example.com
+
+# --- Outputs of the platform stack (wired by CI from `terraform output -json`) ---
+platform:
+  fileServiceGsa: ""
+  lbIpName: ""
+  certificateName: ""
+  sslPolicyName: ""
+  bucketName: ""
+  sqlConnectionName: ""
+  dbIamUser: ""
+  # Private Service Access range Cloud SQL lives in.
+  psaCidr: 10.30.0.0/20
+
+# --- Workload ---
+gateway:
+  name: files-gateway
+
+resources:
+  cpuRequest: "1"
+  memoryRequest: 1Gi
+
+autoscaling:
+  minReplicas: 6
+  maxReplicas: 100    # schema enforces >= 3 (one replica per zone)
+  targetCPUUtilization: 60   # headroom to absorb spikes while new pods start
+
+
+otelEndpoint: ""
+
+cloudSqlProxy:
+  image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.14.1
+  port: 5432

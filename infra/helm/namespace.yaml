@@ -1,0 +1,12 @@
+# Applied once, before the first `helm upgrade --install`, and kept out of the chart:
+# Helm needs the namespace to exist to store release state, and `helm uninstall` must
+# never delete the namespace. Name must match the platform stack's var.k8s_namespace
+# (Workload Identity is bound to <namespace>/file-service).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: files
+  labels:
+    # Pod Security Admission: reject privileged / root / hostPath pods in this namespace.
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted

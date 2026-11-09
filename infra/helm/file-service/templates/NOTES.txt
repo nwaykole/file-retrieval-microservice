@@ -1,0 +1,8 @@
+{{ include "file-service.name" . }} ({{ .Values.appMode }}) deployed to namespace {{ .Release.Namespace }}.
+
+The Gateway provisions the global load balancer; first rollout can take ~5-10 minutes.
+  kubectl -n {{ .Release.Namespace }} get gateway {{ .Values.gateway.name }} -o wide
+  kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "file-service.name" . }}
+
+Smoke test:
+  curl -sf https://{{ .Values.domain }}/ -o /dev/null -w '%{http_code} %{time_total}s\n'

@@ -1,0 +1,23 @@
+# Backends for the integration tests: real Postgres + a Cloud Storage emulator.
+#   docker compose -f docker-compose.it.yml up -d --wait
+#   pytest -m integration
+#   docker compose -f docker-compose.it.yml down -v
+# Ports are non-default so they don't clash with a local Postgres.
+services:
+  postgres:
+    image: postgres:16-alpine          # same major version as Cloud SQL (POSTGRES_16)
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: files
+    ports: ["55432:5432"]
+    healthcheck:
+      # -h forces TCP, so the check only passes once the real server (not the init one) is up.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d files"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  gcs:
+    image: fsouza/fake-gcs-server:1.50.2
+    command: ["-scheme", "http", "-port", "4443", "-public-host", "localhost:4443", "-backend", "memory"]
+    ports: ["4443:4443"]
