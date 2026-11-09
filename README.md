@@ -204,11 +204,6 @@ echo "INSERT INTO users (username, customer_id, password_hash) VALUES ('alice', 
 #   INSERT INTO files (customer_id, file_id, object_key, filename, content_type, size_bytes)
 #     VALUES ('cust-1', 'file-aaaa1111', 'cust-1/hello.txt', 'hello.txt', 'text/plain', 12);
 
-# 5. Load test with the SLOs as pass/fail thresholds
-k6 run -e BASE_URL=https://<domain> -e USERNAME=alice -e PASSWORD='<password>' \
-  -e FILE_ID=<file id> app/loadtest/k6-slo.js
-```
-
 The chart's `values.schema.json` checks the values before anything is applied: `appMode`
 must be `nginx` or `file-service`, `maxReplicas` must be at least 3, and the bucket, Cloud
 SQL and database-user values are required in `file-service` mode. Keep the namespace
